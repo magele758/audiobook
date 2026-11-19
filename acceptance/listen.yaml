@@ -1,0 +1,31 @@
+# 从 PRD.md、需求.md「已决定」和现有 test/ 提炼。文档之间有冲突，状态保持 draft。
+id: listen
+title: 导入 PDF 或网页后能按段生成并可播放
+status: draft
+source: PRD.md
+requirement: |
+  用户导入 PDF 或网页 HTML 后，内容被切成章节和短段落，用参考音合成音频，并在 Web 播放器里按资料库播放。
+non_goals:
+  - 本阶段不支持 PDF 和网页以外的文本格式（需求.md「已决定」）
+  - 不把整本书合成一条长音频
+notes: |
+  待确认：用户看到的生成单位是「一章一个文件」还是「一段一个文件」。需求.md「已决定」写的是章节音频；当前代码和最新提交按短段落调用 Index-TTS。是否训练声音模型也不一致：PRD 写了后续训练，需求.md 写本阶段不训练。
+criteria:
+  - id: AC-1
+    given: 一份有标题的 PDF 或网页 HTML
+    when: 导入资料库
+    then: 能识别章节并在库里看到这本书
+    verify: auto
+    verified: test/audiobook.test.js
+  - id: AC-2
+    given: 一章长于 Index-TTS 单次上限的正文
+    when: 切成朗读片段
+    then: 每一段不超过 500 字，空正文得到空列表
+    verify: auto
+    verified: test/paragraphs.test.js
+  - id: AC-3
+    given: 没有参考音、没有文本，或没有 Index-TTS 地址
+    when: 请求合成
+    then: 抛错，不返回另一段声音的音频
+    verify: auto
+    verified: test/indextts.test.js
