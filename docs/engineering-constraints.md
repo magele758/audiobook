@@ -25,3 +25,8 @@
 - 规则：端口只读 `PORT`，缺省 4173。
   - 违反后果：不看环境变量就再启动一次，绑定失败或连到已经在听的进程。
   - 来源：`src/server.js`。
+
+## GitHub Actions
+
+- PR：`ci.yml` 的 `merge` 门禁包含 `fast`，因此只执行一次 `npm run ci`（单测 + 离线回归）。`secret-scan` 独立跑；`ci-ok` 要求 `merge` 和 `secret-scan` 均成功，只允许单独的 `fast` 跳过。
+- 推送到 `main`：保留 `ci.yml` 的 `fast` 及旧 `Tests / ci`。旧工作流不再接收 PR 事件。

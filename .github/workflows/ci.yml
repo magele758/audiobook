@@ -13,7 +13,9 @@ permissions:
   contents: read
 
 jobs:
+  # merge 已包含 fast；PR 不单独再跑一遍。
   fast:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -60,7 +62,6 @@ jobs:
   # runner 需要模型密钥时在 gate.sh merge 这一步的 env 里引用 secrets。
   merge:
     if: github.event_name == 'pull_request'
-    needs: fast
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -85,8 +86,7 @@ jobs:
           path: artifacts/
           if-no-files-found: ignore
 
-  # 分支保护只把 ci-ok 设为 required check（strict）。fast 失败时 merge 会被跳过，而 GitHub 把跳过的 job 当作通过，
-  # 只设 merge 会被绕过。新增必过 job 时加进 needs；push 事件上只在 PR 运行的 job 是 skipped，不算失败。
+  # 每类事件只允许预定的 skip；失败、取消或意外跳过都不能变成绿灯。
   ci-ok:
     if: always()
     needs: [fast, secret-scan, merge]
@@ -96,14 +96,12 @@ jobs:
       - name: 必过 job 全部成功
         env:
           EVENT: ${{ github.event_name }}
-          NEEDS: ${{ toJSON(needs) }}
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          FAST: ${{ needs.fast.result }}
+          SECRET_SCAN: ${{ needs['secret-scan'].result }}
+          MERGE: ${{ needs.merge.result }}
         run: |
-          echo "$NEEDS"
-          for r in $RESULTS; do
-            case "$r" in
-              success) ;;
-              skipped) if [ "$EVENT" = pull_request ]; then echo "::error::有必过 job 被跳过"; exit 1; fi ;;
-              *) echo "::error::有必过 job 的结果是 $r"; exit 1 ;;
-            esac
-          done
+          echo "$EVENT: fast=$FAST secret-scan=$SECRET_SCAN merge=$MERGE"
+          case "$EVENT:$FAST:$SECRET_SCAN:$MERGE" in
+            pull_request:skipped:success:success|push:success:skipped:skipped) ;;
+            *) echo "::error::必过 job 未成功，或出现非预期的跳过"; exit 1 ;;
+          esac

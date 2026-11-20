@@ -2,8 +2,7 @@ name: Tests
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  # PR 的单测及离线回归由 ci.yml 的 merge 门禁统一执行。
 
 jobs:
   ci:
